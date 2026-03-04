@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from firebase_admin import credentials, initialize_app
 import firebase_admin.auth as auth
 
-from core.config import settings
+from backend.core.config import settings
 
 
 _firebase_app = None

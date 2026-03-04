@@ -2,6 +2,12 @@ from typing import Literal
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+import os
+from pathlib import Path
+
+# Get the absolute path of the directory containing this file
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 class Settings(BaseSettings):
     """
     Application core configuration settings.
@@ -25,7 +31,7 @@ class Settings(BaseSettings):
     FIREBASE_CREDENTIALS_PATH: str | None = None
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=os.path.join(BASE_DIR, ".env"),
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore"

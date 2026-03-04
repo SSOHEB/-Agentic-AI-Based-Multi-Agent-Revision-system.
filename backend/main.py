@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from core.firebase import lifespan
+from backend.core.firebase import lifespan
 # We import the routers below. Note: These router modules will be completely empty when we create them.
-from routers import (
+from backend.routers import (
     auth,
     profile,
     onboarding,
