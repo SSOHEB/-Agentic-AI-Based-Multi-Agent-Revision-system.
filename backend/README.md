@@ -71,3 +71,18 @@ The root file that ties the entire backend together.
 * Configures CORS middleware to allow requests from the frontend.
 * Registers all the individual routers (e.g., `/auth`, `/profile`, `/topics`) so the API can handle those incoming URLs.
 * Provides a root Health Check endpoint (`GET /`) to verify the API is online.
+
+### 6. Environment Templates & Requirements
+* **`.env.example`**: A documented list of all required environment variables without actual values (safe for version control).
+* **`requirements.txt`**: A clean, explicitly versioned list of all python package dependencies to avoid future update conflicts.
+
+### 7. Tests (`tests/`)
+Contains all automated verification checks.
+* **`test_health.py`**: An asynchronous test using `pytest` and `httpx` to ping the root endpoint and assert it successfully returns `{status: ok}`.
+
+### 5. Application Entrypoint (`main.py`)
+The root file that ties the entire backend together.
+* Initializes the FastAPI application and registers the lifespan handler (for Firebase startup).
+* Configures CORS middleware to allow requests from the frontend.
+* Registers all the individual routers (e.g., `/auth`, `/profile`, `/topics`) so the API can handle those incoming URLs.
+* Provides a root Health Check endpoint (`GET /`) to verify the API is online.

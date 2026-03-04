@@ -54,6 +54,14 @@ This is where the actual work happens. The router takes an order and hands it to
 Since your app is AI-powered, these are specialized workers powered by LangGraph and Gemini.
 * E.g., `quiz_agent.py` knows exactly how to read a student's history and generate the perfect quiz questions for them.
 
+### `tests/` - The Health Inspectors
+Before we open the restaurant to the public, we need to make sure everything works automatically.
+* A file like `test_health.py` acts like a fake customer. It automatically makes an order to the "Health Check" endpoint and double-checks that the response comes back as expected!
+
+### `requirements.txt` & `.env` - The Instruction Manuals
+* **`requirements.txt`**: A grocery list of exactly which third-party tools (and their exact versions) we need to build the app (like FastAPI, SQLAlchemy, Google Gemini tools).
+* **`.env.example` & `.env`**: A list of secret passwords and keys needed to make the app work. `example` is public, while `.env` stays locked down on your machine!
+
 ---
 
 ## 3. How to Connect This Project to Your GitHub
