@@ -25,6 +25,13 @@ Think of this as the building's infrastructure (electricity, plumbing, locks on 
 * `firebase.py`: The security guard. It checks if users who are trying to log in are actually who they say they are.
 * `dependencies.py`: Handy tools that any part of your app can ask for (like "give me the database" or "tell me which user made this request").
 
+### `main.py` - The Restaurant Manager
+This is the main entry point to your application. It brings everything together.
+* It starts the FastAPI "kitchen".
+* It sets up the security guard (Firebase) when the restaurant opens.
+* It registers all the Waiters (Routers) so that when an order (request) comes in, the manager knows exactly who to give it to.
+* It has a simple "Health Check" endpoint (like asking the manager "Are you open?") to make sure everything is running smoothly.
+
 ### `routers/` - The Waiters (Endpoints)
 These files act as the URLs your frontend will call.
 * If the frontend wants to get a user's profile, it calls the waiter at `/profile`. The `profile.py` router takes the request and passes it to the right place.

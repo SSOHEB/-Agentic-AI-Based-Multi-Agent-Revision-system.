@@ -64,3 +64,10 @@ Handles Firebase Admin SDK initialization and token verification.
 Reusable FastAPI dependency injections.
 * **`get_db`**: Injects an active `AsyncSession` into route handlers.
 * **`get_current_user`**: Secures endpoints by extracting the Bearer token, verifying it against Firebase, and returning the authenticated user's payload. Raises a `401 Unauthorized` exception if the token is invalid or missing.
+
+### 5. Application Entrypoint (`main.py`)
+The root file that ties the entire backend together.
+* Initializes the FastAPI application and registers the lifespan handler (for Firebase startup).
+* Configures CORS middleware to allow requests from the frontend.
+* Registers all the individual routers (e.g., `/auth`, `/profile`, `/topics`) so the API can handle those incoming URLs.
+* Provides a root Health Check endpoint (`GET /`) to verify the API is online.
