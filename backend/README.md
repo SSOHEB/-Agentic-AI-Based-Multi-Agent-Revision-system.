@@ -65,6 +65,37 @@ Reusable FastAPI dependency injections.
 * **`get_db`**: Injects an active `AsyncSession` into route handlers.
 * **`get_current_user`**: Secures endpoints by extracting the Bearer token, verifying it against Firebase, and returning the authenticated user's payload. Raises a `401 Unauthorized` exception if the token is invalid or missing.
 
+## Database Models (`backend/models/`)
+This directory contains the SQLAlchemy 2.0 ORM classes that define the structure of our PostgreSQL tables.
+
+### `base.py`
+The foundation for all database models.
+* Defines the primary `Base` class inherited from `DeclarativeBase` that all subsequent models extend.
+* Provides a `TimestampMixin` utility class that automatically adds and manages timezone-aware `created_at` and `updated_at` columns on any model it is applied to.
+
+### `user.py`
+The ORM model representing the `users` table.
+* Inherits from `Base` and `TimestampMixin`.
+* **Primary Key**: `id` (UUID4).
+* **Fields**: `email` (indexed, unique), `name`, `firebase_uid` (unique constraint for auth linking), and `is_active` (boolean).
+* **Relationships**: Contains a `One-to-Many` relationship with `topics` allowing `user.topics` collection access.
+
+### `topic.py`
+The ORM model representing the `topics` table (the actual study subjects).
+* Inherits from `Base` and `TimestampMixin`.
+* **Primary Key**: `id` (UUID4).
+* **Foreign Key**: `user_id` mapped strictly to `users.id` causing `CASCADE` deletion if the parent user is deleted.
+* **Fields**: `title`, `description` (nullable), and `difficulty_level` (integer).
+* **Relationships**: Links back to the `User` owner via `topic.user`.
+
+### `quiz_session.py`
+The ORM model representing the `quiz_sessions` table (individual revision test instances).
+* Inherits from `Base` and `TimestampMixin`.
+* **Primary Key**: `id` (UUID4).
+* **Foreign Key**: `user_id` mapped strictly to `users.id` (CASCADE deletion).
+* **Fields**: `started_at` (DateTime), `ended_at` (nullable DateTime), `score` (nullable float), `difficulty_level` (int), and `status` (string).
+* **Relationships**: Links back to the `User` actor via `quiz_session.user`.
+
 ### 5. Application Entrypoint (`main.py`)
 The root file that ties the entire backend together.
 * Initializes the FastAPI application and registers the lifespan handler (for Firebase startup).
@@ -80,9 +111,33 @@ The root file that ties the entire backend together.
 Contains all automated verification checks.
 * **`test_health.py`**: An asynchronous test using `pytest` and `httpx` to ping the root endpoint and assert it successfully returns `{status: ok}`.
 
-### 5. Application Entrypoint (`main.py`)
-The root file that ties the entire backend together.
-* Initializes the FastAPI application and registers the lifespan handler (for Firebase startup).
-* Configures CORS middleware to allow requests from the frontend.
-* Registers all the individual routers (e.g., `/auth`, `/profile`, `/topics`) so the API can handle those incoming URLs.
-* Provides a root Health Check endpoint (`GET /`) to verify the API is online.
+### 8. Database Migrations (`migrations/`)
+Alembic is configured to automatically track changes in the SQLAlchemy models and generate versioned migration scripts.
+* Employs the `async` template to officially support our async `asyncpg` database connection.
+* Dynamically loads `DATABASE_URL` via the runtime `.env` integration inside `env.py`.
+* Exposes `Base.metadata` to securely detect the `users`, `topics`, and `quiz_sessions` tables for the `alembic revision --autogenerate` command.
+
+## 9. Backend Fundamentals & Standards
+
+### API Standard Conventions (RESTful)
+The backend routes strictly adhere to RESTful methodologies using standard HTTP verbs:
+* **`GET`**: Retrieve resources (used for fetching profiles, viewing topics, etc.)
+* **`POST`**: Create new resources (used for initializing sessions or adding new topics)
+* **`PATCH`**: Partially update resources (used for modifying user settings)
+* **`DELETE`**: Remove resources
+
+### HTTP Status Codes
+Endpoints return industry-standard HTTP Status Codes indicating request success or failure reasons:
+* **`200 OK`**: Successful request execution
+* **`201 Created`**: Successful resource creation
+* **`400 Bad Request`**: Client-side validation failure / invalid inputs
+* **`401 Unauthorized`**: Authentication failure (missing or invalid Firebase token)
+* **`404 Not Found`**: Resource does not exist
+* **`500 Internal Server Error`**: Unexpected server-side failure
+
+### Database Connectivity
+We utilize **SQLAlchemy 2.0** integrated with the **asyncpg** driver to allow for fully non-blocking database queries. 
+* By structuring our database connection via `create_async_engine`, FastAPI can fulfill thousands of other incoming HTTP requests simultaneously while awaiting complex Database queries in the background. 
+* To prevent connection pooling issues, each HTTP request is injected with an ephemeral database dependency (`AsyncSession`) via `get_db()` which is gracefully torn down and released back into the pool upon request completion.
+
+

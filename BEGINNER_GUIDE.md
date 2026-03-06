@@ -38,7 +38,10 @@ These files act as the URLs your frontend will call.
 
 ### `models/` - The Database Layout
 This tells the database what your tables look like.
-* `user.py` might say: "A User has an ID, a name, and an email."
+* **`base.py`**: Think of this as a blank sheet of company letterhead. Every official document (table) we create prints on this letterhead, so it automatically gets stamped with "Created At" and "Updated At" times.
+* **`user.py`**: This is printed on the letterhead! It tells the database that every User must have a unique ID, an email, a name, and a secret `firebase_uid` to prove they logged in securely.
+* **`topic.py`**: A Topic is a core subject a user wants to study (like "Python Loops"). We've set up a "Relationship" between the User and the Topic here. The database is smart enough to know that an individual Topic is directly owned by exactly one User, but a User can own hundreds of Topics!
+* **`quiz_session.py`**: Think of this as a receipt for a test a student took! It prints exactly when the test started (`started_at`), when it ended (`ended_at`), the overall `score`, and whether they finished it or abandoned it (`status`). It also links directly back to the `User` who took the test.
 * This uses *SQLAlchemy*, which translates Python code into SQL (database language) automatically!
 
 ### `schemas/` - The Bouncers (Pydantic)
@@ -54,6 +57,11 @@ This is where the actual work happens. The router takes an order and hands it to
 Since your app is AI-powered, these are specialized workers powered by LangGraph and Gemini.
 * E.g., `quiz_agent.py` knows exactly how to read a student's history and generate the perfect quiz questions for them.
 
+### `migrations/` - The Kitchen Renovators (Alembic)
+As our restaurant grows, we might need a bigger pantry or new types of shelves (adding new tables or columns to the database).
+* **Alembic** is the tool we use for this. It acts as a construction crew, automatically looking at the layout in your `models/` folder to safely update the real PostgreSQL database without destroying any old data!
+* A "Migration" is a saved history file of every change we make to the database structure (like "Added the Quiz Session table on Tuesday").
+
 ### `tests/` - The Health Inspectors
 Before we open the restaurant to the public, we need to make sure everything works automatically.
 * A file like `test_health.py` acts like a fake customer. It automatically makes an order to the "Health Check" endpoint and double-checks that the response comes back as expected!
@@ -61,6 +69,36 @@ Before we open the restaurant to the public, we need to make sure everything wor
 ### `requirements.txt` & `.env` - The Instruction Manuals
 * **`requirements.txt`**: A grocery list of exactly which third-party tools (and their exact versions) we need to build the app (like FastAPI, SQLAlchemy, Google Gemini tools).
 * **`.env.example` & `.env`**: A list of secret passwords and keys needed to make the app work. `example` is public, while `.env` stays locked down on your machine!
+
+---
+
+## 3. Backend Fundamentals: A Crash Course
+
+Before we start building more of the kitchen, let's learn the basic rules of how the restaurant operates.
+
+### How the Waiters Talk (HTTP Methods)
+When the Frontend sends a request to your Backend routers, it uses specific verbs to tell the backend what it wants to do:
+
+* **`GET`** - "Please give me this." (e.g., *GET /profile* asks for the user's data).
+* **`POST`** - "Here is new information, please create something." (e.g., *POST /topics* gives the backend a list of subjects to create a new study plan).
+* **`PATCH` / `PUT`** - "Please update this existing thing." (e.g., *PATCH /profile* to change a username).
+* **`DELETE`** - "Get rid of this." (e.g., *DELETE /session*).
+
+### How the Manager Replies (Status Codes)
+When the backend responds, it always attaches a 3-digit number called a Status Code. It's a quick way for the Frontend to know if things went right or wrong.
+
+* **`200 OK`**: Everything went perfectly! Here is your data.
+* **`201 Created`**: Success! I have created the new database item you asked for.
+* **`400 Bad Request`**: You sent me bad data (e.g., you said your age was "apple").
+* **`401 Unauthorized`**: You aren't logged in, or your Firebase token is invalid. 
+* **`404 Not Found`**: The thing you are looking for doesn't exist in the database.
+* **`500 Internal Server Error`**: The backend code crashed. (This is our fault as developers!)
+
+### The Database Connection (SQLAlchemy & Async)
+In `core/database.py`, we created something called an `Async Engine`.
+* **Database URL**: This is the exact address of your database (like `postgresql://user:password@localhost/mydb`).
+* **Async**: Imagine a cook waiting 10 minutes for water to boil. Instead of doing nothing, an *Async* cook will go chop vegetables while waiting. In your app, while the backend waits for the database to find user data, it can handle other users' requests at the same time! This makes your app extremely fast.
+* **Session**: Every time a request comes in, the backend opens a "Session" (a temporary connection to the database), does its work, and firmly closes it so the database doesn't get overwhelmed.
 
 ---
 

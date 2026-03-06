@@ -1,6 +1,7 @@
 import uuid
+from datetime import datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import String, Integer, ForeignKey
+from sqlalchemy import String, Integer, ForeignKey, Float, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -10,11 +11,11 @@ if TYPE_CHECKING:
     from backend.models.user import User
 
 
-class Topic(Base, TimestampMixin):
+class QuizSession(Base, TimestampMixin):
     """
-    SQLAlchemy model representing the study topics table.
+    SQLAlchemy model representing the quiz_sessions table.
     """
-    __tablename__ = "topics"
+    __tablename__ = "quiz_sessions"
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), 
@@ -28,13 +29,18 @@ class Topic(Base, TimestampMixin):
         index=True
     )
     
-    title: Mapped[str] = mapped_column(
-        String, 
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
         nullable=False
     )
     
-    description: Mapped[str | None] = mapped_column(
-        String, 
+    ended_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+    
+    score: Mapped[float | None] = mapped_column(
+        Float,
         nullable=True
     )
     
@@ -44,5 +50,11 @@ class Topic(Base, TimestampMixin):
         nullable=False
     )
     
+    status: Mapped[str] = mapped_column(
+        String,
+        default="active", # e.g., "active", "completed", "abandoned"
+        nullable=False
+    )
+    
     # Relationships
-    user: Mapped["User"] = relationship(back_populates="topics")
+    user: Mapped["User"] = relationship(back_populates="quiz_sessions")
