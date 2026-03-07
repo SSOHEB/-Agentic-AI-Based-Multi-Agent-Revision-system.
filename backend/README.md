@@ -24,6 +24,7 @@ backend/
 │   ├── routers/                     # HTTP endpoints (FastAPI routers)
 │   ├── models/                      # SQLAlchemy ORM models
 │   ├── schemas/                     # Pydantic schemas for request/response validation
+│   ├── repositories/                # Data access layer for database queries
 │   ├── services/                    # Business logic bridging routers and agents
 │   ├── agents/                      # LangGraph AI agents (Scheduler, RAG, Quiz, Eval, Progress)
 │   ├── tools/                       # Reusable tools for agents (RAG retriever, DB accessor)
@@ -96,12 +97,45 @@ The ORM model representing the `quiz_sessions` table (individual revision test i
 * **Fields**: `started_at` (DateTime), `ended_at` (nullable DateTime), `score` (nullable float), `difficulty_level` (int), and `status` (string).
 * **Relationships**: Links back to the `User` actor via `quiz_session.user`.
 
+## Validation Schemas (`backend/schemas/`)
+This directory contains Pydantic v2 models used to validate incoming request data and format outgoing response data.
+
+### `user_schema.py`
+Defines the Pydantic schemas for User-related operations.
+* **`UserCreate`**: Validates payload when a new user registers (`email`, `name`, `firebase_uid`).
+* **`UserResponse`**: Formats the secure outgoing representation of a user. It uses `model_config = ConfigDict(from_attributes=True)` to easily convert SQLAlchemy User ORM models directly into JSON containing `id`, `email`, `name`, and `is_active`.
+
+## Data Access Layer (`backend/repositories/`)
+This directory contains repository classes that abstract away direct database queries using SQLAlchemy.
+
+### `user_repository.py`
+Provides database access methods for the User entity via the `UserRepository` class.
+* Uses `AsyncSession` to safely query the database.
+* Includes methods to `create` new users, and fetch them via `get_by_email` and `get_by_id`.
+
+## Business Logic Layer (`backend/services/`)
+This directory contains service classes that handle core application and business rules, acting as the middleman between Routers and Repositories.
+
+### `user_service.py`
+Contains the `UserService` class.
+* Takes a `UserRepository` instance to perform data operations.
+* Contains the `create_user` complex logic: checks if a user already exists by email, early-returns them if they do, or constructs and saves a new `User` model if they don't.
+
 ### 5. Application Entrypoint (`main.py`)
 The root file that ties the entire backend together.
 * Initializes the FastAPI application and registers the lifespan handler (for Firebase startup).
 * Configures CORS middleware to allow requests from the frontend.
-* Registers all the individual routers (e.g., `/auth`, `/profile`, `/topics`) so the API can handle those incoming URLs.
+* Registers all the individual routers (e.g., `/auth`, `/users`, `/topics`) so the API can handle those incoming URLs.
 * Provides a root Health Check endpoint (`GET /`) to verify the API is online.
+
+### 6. API Endpoints (`backend/routers/`)
+This directory contains the FastAPI routers that define the URLs the frontend can communicate with.
+
+#### `user_router.py`
+Defines the `POST /users/` API endpoint.
+* Injects the `AsyncSession` database dependency.
+* Instantiates the `UserRepository` and `UserService`.
+* Passes the incoming `UserCreate` JSON body directly to the service layer and returns a validated `UserResponse`.
 
 ### 6. Environment Templates & Requirements
 * **`.env.example`**: A documented list of all required environment variables without actual values (safe for version control).

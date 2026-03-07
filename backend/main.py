@@ -13,6 +13,7 @@ from backend.routers import (
     notifications,
     internal
 )
+from backend.routers.user_router import router as user_router
 
 # Initialize the FastAPI app with the lifespan event handler (which initializes Firebase)
 app = FastAPI(
@@ -41,6 +42,7 @@ app.include_router(sessions.router)
 app.include_router(progress.router)
 app.include_router(notifications.router)
 app.include_router(internal.router)
+app.include_router(user_router)
 
 
 @app.get("/", tags=["Health"])

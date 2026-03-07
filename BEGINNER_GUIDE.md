@@ -49,6 +49,10 @@ Before data enters or leaves your app, it must be checked.
 * **Pydantic** is a library that checks if the data is correct. 
 * If someone tries to create an account with an age of `"banana"`, the schema will block it and say "Age must be a number!"
 
+### `repositories/` - The Pantry Managers (Database Access)
+These files act as the official handlers for fetching or saving ingredients in the pantry (database).
+* Instead of having everyone talk to the database directly, the Chefs (Services) ask a manager like `user_repository.py` to "Get me the user with this email" or "Save this new user." This keeps all database SQL queries organized safely in one place!
+
 ### `services/` - The Chefs (Business Logic)
 This is where the actual work happens. The router takes an order and hands it to a service.
 * If a router gets a request to "Create a new quiz session", it tells `session_service.py` to do the heavy lifting: checking the database, doing math, and talking to AI agents.
@@ -102,7 +106,30 @@ In `core/database.py`, we created something called an `Async Engine`.
 
 ---
 
-## 3. How to Connect This Project to Your GitHub
+## 4. How to Run and Test the Backend
+
+Now that you understand how the kitchen is built, here is how you open the restaurant and test the menu!
+
+### Step 1: Start the Server (Uvicorn)
+Open your terminal, make sure you are inside the `THE MAIN PROJECT` folder, and run:
+`python -m uvicorn backend.main:app --reload`
+* `uvicorn` is the high-speed server that hosts the FastAPI code.
+* `backend.main:app` tells it to look in the `backend/main.py` file and start the `app` object.
+* `--reload` is a special flag for developers. It means every time you press "Save" in your code editor, the server instantly restarts itself so you don't have to!
+
+### Step 2: Open the Interactive Documentation (Swagger UI)
+Once the server says it's running, open your web browser and go to:
+**http://127.0.0.1:8000/docs**
+
+FastAPI automatically reads all your schemas and routers to build a beautiful, interactive testing webpage for you!
+1. Scroll down to find the `POST /users/` endpoint.
+2. Click the box, then click the **"Try it out"** button in the top right.
+3. Edit the JSON body to include an email and name, then hit **Execute**.
+4. The frontend will instantly show you the `200 OK` response returning from your database!
+
+---
+
+## 5. How to Connect This Project to Your GitHub
 
 GitHub is like a save-game system for your code. It keeps track of every change you make and lets you back it up online.
 
@@ -147,3 +174,24 @@ Open your terminal (Command Prompt or VS Code terminal), make sure you are insid
    ```
 
 **Important Note before you do this:** Make sure you create a `.gitignore` file so you don't accidentally push your secret passwords (like `.env`) to the internet! We can create that next if you want.
+
+---
+
+## 4. Glossary: Simple Terms & Full Forms
+
+Here are some common terms you will encounter in backend development, along with their full forms and simple definitions:
+
+* **API (Application Programming Interface)**: Think of it as a menu in a restaurant. It provides a list of operations you can call, and the backend prepares and serves the required data. It allows different software systems to talk to each other.
+* **HTTP (HyperText Transfer Protocol)**: The set of rules used to transfer data over the web. It's the language that the Frontend and Backend use to communicate (e.g., using GET or POST requests).
+* **URL (Uniform Resource Locator)**: The web address you type into a browser or use in your code to find a specific page or API endpoint.
+* **JSON (JavaScript Object Notation)**: A lightweight, easy-to-read text format for sending data between the Frontend and Backend. It looks very similar to a standard Python dictionary.
+* **REST (Representational State Transfer)**: A widely used style of designing APIs using standard HTTP methods (GET, POST, PUT, DELETE) to manage resources cleanly and predictably.
+* **CRUD (Create, Read, Update, Delete)**: The four basic operations you can perform on any data in a database.
+* **DB (Database)**: An organized collection of structured data, typically stored electronically in a computer system (like PostgreSQL or MySQL).
+* **SQL (Structured Query Language)**: The standard language used to communicate with and manipulate databases.
+* **ORM (Object-Relational Mapping)**: A tool (like SQLAlchemy) that lets you write code in Python to interact with your database, instead of writing raw SQL queries.
+* **GUI (Graphical User Interface)**: The visual parts of a software application (buttons, menus, icons) that users interact with.
+* **UI/UX (User Interface / User Experience)**: UI refers to how an app looks, while UX refers to how easy, intuitive, and enjoyable it is to use. 
+* **IDE (Integrated Development Environment)**: The software application you use to write your code, like Visual Studio Code (VS Code) or PyCharm.
+* **JWT (JSON Web Token)**: A secure digital "passport" used to verify a user's identity after they log in. It proves to the backend that the user is authorized to perform certain actions.
+* **UUID (Universally Unique Identifier)**: A long, random sequence of characters used to give a uniquely identifiable ID to every single item in the database (like a user or a topic) so they never clash.
