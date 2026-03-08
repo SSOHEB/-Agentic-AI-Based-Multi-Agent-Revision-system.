@@ -35,19 +35,21 @@ This is the main entry point to your application. It brings everything together.
 ### `routers/` - The Waiters (Endpoints)
 These files act as the URLs your frontend will call.
 * If the frontend wants to get a user's profile, it calls the waiter at `/profile`. The `profile.py` router takes the request and passes it to the right place.
+* E.g., `topic_router.py` handles requests like "Create a new topic" or "Get all my topics" and sends the orders to the kitchen!
 
 ### `models/` - The Database Layout
 This tells the database what your tables look like.
 * **`base.py`**: Think of this as a blank sheet of company letterhead. Every official document (table) we create prints on this letterhead, so it automatically gets stamped with "Created At" and "Updated At" times.
 * **`user.py`**: This is printed on the letterhead! It tells the database that every User must have a unique ID, an email, a name, and a secret `firebase_uid` to prove they logged in securely.
 * **`topic.py`**: A Topic is a core subject a user wants to study (like "Python Loops"). We've set up a "Relationship" between the User and the Topic here. The database is smart enough to know that an individual Topic is directly owned by exactly one User, but a User can own hundreds of Topics!
-* **`quiz_session.py`**: Think of this as a receipt for a test a student took! It prints exactly when the test started (`started_at`), when it ended (`ended_at`), the overall `score`, and whether they finished it or abandoned it (`status`). It also links directly back to the `User` who took the test.
+* **`quiz_session.py`**: Think of this as a receipt for a test a student took! It prints exactly when the test started (`started_at`), when it ended (`ended_at`), the overall `score`, and whether they finished it or abandoned it (`status`). It links directly back to both the `User` who took the test, and the specific `Topic` they were studying.
 * This uses *SQLAlchemy*, which translates Python code into SQL (database language) automatically!
 
 ### `schemas/` - The Bouncers (Pydantic)
 Before data enters or leaves your app, it must be checked.
 * **Pydantic** is a library that checks if the data is correct. 
 * If someone tries to create an account with an age of `"banana"`, the schema will block it and say "Age must be a number!"
+* E.g., `topic_schema.py` ensures that when someone creates a Topic, they provide an exact `title` and a valid UUID for the `user_id`.
 
 ### `repositories/` - The Pantry Managers (Database Access)
 These files act as the official handlers for fetching or saving ingredients in the pantry (database).
@@ -56,6 +58,7 @@ These files act as the official handlers for fetching or saving ingredients in t
 ### `services/` - The Chefs (Business Logic)
 This is where the actual work happens. The router takes an order and hands it to a service.
 * If a router gets a request to "Create a new quiz session", it tells `session_service.py` to do the heavy lifting: checking the database, doing math, and talking to AI agents.
+* E.g., `topic_service.py` handles the logic of attaching a default difficulty level if the user didn't provide one, and then officially asking the repository to save the new Topic.
 
 ### `agents/` - The AI Specialists
 Since your app is AI-powered, these are specialized workers powered by LangGraph and Gemini.

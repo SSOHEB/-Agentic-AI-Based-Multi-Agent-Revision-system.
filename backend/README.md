@@ -93,9 +93,11 @@ The ORM model representing the `topics` table (the actual study subjects).
 The ORM model representing the `quiz_sessions` table (individual revision test instances).
 * Inherits from `Base` and `TimestampMixin`.
 * **Primary Key**: `id` (UUID4).
-* **Foreign Key**: `user_id` mapped strictly to `users.id` (CASCADE deletion).
+* **Foreign Keys**: 
+  * `user_id` mapped strictly to `users.id` (CASCADE deletion).
+  * `topic_id` mapped strictly to `topics.id` (CASCADE deletion).
 * **Fields**: `started_at` (DateTime), `ended_at` (nullable DateTime), `score` (nullable float), `difficulty_level` (int), and `status` (string).
-* **Relationships**: Links back to the `User` actor via `quiz_session.user`.
+* **Relationships**: Links back to the `User` actor via `quiz_session.user`, and to the specific `Topic` being tested.
 
 ## Validation Schemas (`backend/schemas/`)
 This directory contains Pydantic v2 models used to validate incoming request data and format outgoing response data.
@@ -136,6 +138,12 @@ Defines the `POST /users/` API endpoint.
 * Injects the `AsyncSession` database dependency.
 * Instantiates the `UserRepository` and `UserService`.
 * Passes the incoming `UserCreate` JSON body directly to the service layer and returns a validated `UserResponse`.
+
+#### `topic_router.py`
+Defines the Topic-related endpoints (`POST /topics/` and `GET /topics/user/{user_id}`).
+* Injects the `AsyncSession` database dependency.
+* Instantiates the `TopicRepository` and `TopicService`.
+* Handles the creation of new topics and fetching existing topics for a specific user.
 
 ### 6. Environment Templates & Requirements
 * **`.env.example`**: A documented list of all required environment variables without actual values (safe for version control).

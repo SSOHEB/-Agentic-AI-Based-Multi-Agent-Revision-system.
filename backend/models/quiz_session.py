@@ -29,6 +29,12 @@ class QuizSession(Base, TimestampMixin):
         index=True
     )
     
+    topic_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("topics.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False

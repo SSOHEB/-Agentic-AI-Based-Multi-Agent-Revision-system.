@@ -14,6 +14,8 @@ from backend.routers import (
     internal
 )
 from backend.routers.user_router import router as user_router
+from backend.routers.topic_router import router as topic_router
+from backend.routers.quiz_router import router as quiz_router
 
 # Initialize the FastAPI app with the lifespan event handler (which initializes Firebase)
 app = FastAPI(
@@ -37,7 +39,8 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(profile.router)
 app.include_router(onboarding.router)
-app.include_router(topics.router)
+app.include_router(topic_router)
+app.include_router(quiz_router)
 app.include_router(sessions.router)
 app.include_router(progress.router)
 app.include_router(notifications.router)
