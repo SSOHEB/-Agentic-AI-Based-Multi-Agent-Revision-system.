@@ -9,6 +9,7 @@ from backend.models.user import User
 from backend.models.topic import Topic
 from backend.models.quiz_session import QuizSession
 from backend.models.answer import Answer
+from backend.models.question import Question
 
 # Define the models exposed by this package
 __all__ = [
@@ -16,5 +17,6 @@ __all__ = [
     "User",
     "Topic",
     "QuizSession",
-    "Answer"
+    "Answer",
+    "Question"
 ]

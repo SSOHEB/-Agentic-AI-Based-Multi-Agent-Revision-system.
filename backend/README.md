@@ -106,6 +106,13 @@ The ORM model representing the `answers` table (stores individual answers submit
 * **Foreign Key**: `session_id` mapped strictly to `quiz_sessions.id` (CASCADE deletion).
 * **Fields**: `question_id` (UUID4) and `answer_text` (string).
 
+### `question.py`
+The ORM model representing the `questions` table (the actual questions served during a quiz session).
+* Inherits from `Base` and `TimestampMixin`.
+* **Primary Key**: `id` (UUID4).
+* **Foreign Key**: `quiz_session_id` mapped strictly to `quiz_sessions.id` (CASCADE deletion).
+* **Fields**: `question_text`, `question_type`, `difficulty`, and `options` (JSON).
+
 ## Validation Schemas (`backend/schemas/`)
 This directory contains Pydantic v2 models used to validate incoming request data and format outgoing response data.
 
@@ -119,6 +126,10 @@ Defines the Pydantic schemas for Answer-related operations.
 * **`AnswerSubmitRequest`**: Validates payload when a user submits an answer to a quiz question (`session_id`, `question_id`, `answer_text`).
 * **`AnswerResponse`**: Formats the outgoing response of a submitted answer, converting the SQLAlchemy ORM model into JSON.
 
+### `question_schema.py`
+Defines the Pydantic schemas for Question-related operations.
+* **`QuestionResponse`**: Formats the outgoing JSON representation of a quiz question, containing the ID, text, type, difficulty, and MCQ options list.
+
 ## Data Access Layer (`backend/repositories/`)
 This directory contains repository classes that abstract away direct database queries using SQLAlchemy.
 
@@ -130,6 +141,10 @@ Provides database access methods for the User entity via the `UserRepository` cl
 ### `answer_repository.py`
 Provides database access for the Answer entity.
 * Handles saving new answers and retrieving a list of answers for a specific quiz session via `get_session_answers`.
+
+### `question_repository.py`
+Provides database access for the Question entity.
+* Retrieves all questions mapped to a specific quiz session ID via `get_questions_by_session`.
 
 ## Business Logic Layer (`backend/services/`)
 This directory contains service classes that handle core application and business rules, acting as the middleman between Routers and Repositories.
@@ -169,6 +184,11 @@ Defines the Topic-related endpoints (`POST /topics/` and `GET /topics/user/{user
 Defines the Answer-related endpoints (`POST /quiz/answer`).
 * Injects the `AsyncSession` database dependency.
 * Instantiates the `AnswerRepository` and `AnswerService` to persist student responses.
+
+#### `quiz_router.py`
+Defines Quiz Session-related endpoints (`POST /quiz/start` and `GET /quiz/{session_id}/questions`).
+* Injects `AsyncSession` dependency.
+* Initiates new quiz sessions, and fetches the list of generated questions for an active session to surface to the frontend.
 
 ### 6. Environment Templates & Requirements
 * **`.env.example`**: A documented list of all required environment variables without actual values (safe for version control).
