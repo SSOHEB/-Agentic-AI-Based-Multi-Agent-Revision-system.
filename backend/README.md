@@ -113,6 +113,13 @@ The ORM model representing the `questions` table (the actual questions served du
 * **Foreign Key**: `quiz_session_id` mapped strictly to `quiz_sessions.id` (CASCADE deletion).
 * **Fields**: `question_text`, `question_type`, `difficulty`, and `options` (JSON).
 
+### `performance_log.py`
+The ORM model representing the `performance_log` table, which tracks a student's accuracy and historical progress.
+* Inherits from `Base`.
+* **Primary Key**: `id` (UUID4).
+* **Foreign Keys**: `user_id`, `topic_id`, and `session_id` to establish full relational tracking.
+* **Fields**: `performance_score` (float), `retention_before` (float), `retention_after` (float), and `logged_at` (datetime).
+
 ## Validation Schemas (`backend/schemas/`)
 This directory contains Pydantic v2 models used to validate incoming request data and format outgoing response data.
 
@@ -130,6 +137,10 @@ Defines the Pydantic schemas for Answer-related operations.
 Defines the Pydantic schemas for Question-related operations.
 * **`QuestionResponse`**: Formats the outgoing JSON representation of a quiz question, containing the ID, text, type, difficulty, and MCQ options list.
 
+### `performance_schema.py`
+Defines the Pydantic schemas for Performance Tracking.
+* **`PerformanceLogResponse`**: Formats the outgoing JSON representation of a calculated performance log, including exactly how well a user performed on a specific session and their retention metrics.
+
 ## Data Access Layer (`backend/repositories/`)
 This directory contains repository classes that abstract away direct database queries using SQLAlchemy.
 
@@ -146,6 +157,11 @@ Provides database access for the Answer entity.
 Provides database access for the Question entity.
 * Retrieves all questions mapped to a specific quiz session ID via `get_questions_by_session`.
 
+### `performance_repository.py`
+Provides database access for the PerformanceLog entity.
+* Creates new tracking entries securely in the database (`create_log`).
+* Queries the chronologically most recent performance metric for a given user's scope (`get_latest_topic_performance`).
+
 ## Business Logic Layer (`backend/services/`)
 This directory contains service classes that handle core application and business rules, acting as the middleman between Routers and Repositories.
 
@@ -157,6 +173,10 @@ Contains the `UserService` class.
 ### `answer_service.py`
 Contains the `AnswerService` class.
 * Implements logic to construct the SQLAlchemy `Answer` model from incoming validated payloads and handles storing it via the repository.
+
+### `performance_service.py`
+Contains the `PerformanceService` class.
+* Extracts historical answer metrics dynamically and calculates floating-point accuracy metrics linking quiz models. Includes future-proof hooks for invoking retention formulas.
 
 ### 5. Application Entrypoint (`main.py`)
 The root file that ties the entire backend together.

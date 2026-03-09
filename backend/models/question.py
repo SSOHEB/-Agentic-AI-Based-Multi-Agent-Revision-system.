@@ -24,3 +24,4 @@ class Question(Base, TimestampMixin):
     question_type: Mapped[str] = mapped_column(String, nullable=False)
     difficulty: Mapped[str] = mapped_column(String, nullable=False)
     options: Mapped[dict] = mapped_column(JSON, nullable=False)
+    correct_answer: Mapped[str] = mapped_column(String, nullable=False, server_default="A")

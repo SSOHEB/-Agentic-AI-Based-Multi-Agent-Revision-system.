@@ -3,6 +3,14 @@ from datetime import datetime
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 
+class QuizResultResponse(BaseModel):
+    session_id: UUID
+    total_questions: int
+    correct_answers: int
+    accuracy_percent: float
+
+    model_config = ConfigDict(from_attributes=True)
+
 class QuizStartRequest(BaseModel):
     user_id: UUID
     topic_id: UUID
