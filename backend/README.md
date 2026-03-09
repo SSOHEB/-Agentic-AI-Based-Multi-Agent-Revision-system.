@@ -99,6 +99,13 @@ The ORM model representing the `quiz_sessions` table (individual revision test i
 * **Fields**: `started_at` (DateTime), `ended_at` (nullable DateTime), `score` (nullable float), `difficulty_level` (int), and `status` (string).
 * **Relationships**: Links back to the `User` actor via `quiz_session.user`, and to the specific `Topic` being tested.
 
+### `answer.py`
+The ORM model representing the `answers` table (stores individual answers submitted during a quiz session).
+* Inherits from `Base` and `TimestampMixin`.
+* **Primary Key**: `id` (UUID4).
+* **Foreign Key**: `session_id` mapped strictly to `quiz_sessions.id` (CASCADE deletion).
+* **Fields**: `question_id` (UUID4) and `answer_text` (string).
+
 ## Validation Schemas (`backend/schemas/`)
 This directory contains Pydantic v2 models used to validate incoming request data and format outgoing response data.
 
@@ -106,6 +113,11 @@ This directory contains Pydantic v2 models used to validate incoming request dat
 Defines the Pydantic schemas for User-related operations.
 * **`UserCreate`**: Validates payload when a new user registers (`email`, `name`, `firebase_uid`).
 * **`UserResponse`**: Formats the secure outgoing representation of a user. It uses `model_config = ConfigDict(from_attributes=True)` to easily convert SQLAlchemy User ORM models directly into JSON containing `id`, `email`, `name`, and `is_active`.
+
+### `answer_schema.py`
+Defines the Pydantic schemas for Answer-related operations.
+* **`AnswerSubmitRequest`**: Validates payload when a user submits an answer to a quiz question (`session_id`, `question_id`, `answer_text`).
+* **`AnswerResponse`**: Formats the outgoing response of a submitted answer, converting the SQLAlchemy ORM model into JSON.
 
 ## Data Access Layer (`backend/repositories/`)
 This directory contains repository classes that abstract away direct database queries using SQLAlchemy.
@@ -115,6 +127,10 @@ Provides database access methods for the User entity via the `UserRepository` cl
 * Uses `AsyncSession` to safely query the database.
 * Includes methods to `create` new users, and fetch them via `get_by_email` and `get_by_id`.
 
+### `answer_repository.py`
+Provides database access for the Answer entity.
+* Handles saving new answers and retrieving a list of answers for a specific quiz session via `get_session_answers`.
+
 ## Business Logic Layer (`backend/services/`)
 This directory contains service classes that handle core application and business rules, acting as the middleman between Routers and Repositories.
 
@@ -122,6 +138,10 @@ This directory contains service classes that handle core application and busines
 Contains the `UserService` class.
 * Takes a `UserRepository` instance to perform data operations.
 * Contains the `create_user` complex logic: checks if a user already exists by email, early-returns them if they do, or constructs and saves a new `User` model if they don't.
+
+### `answer_service.py`
+Contains the `AnswerService` class.
+* Implements logic to construct the SQLAlchemy `Answer` model from incoming validated payloads and handles storing it via the repository.
 
 ### 5. Application Entrypoint (`main.py`)
 The root file that ties the entire backend together.
@@ -144,6 +164,11 @@ Defines the Topic-related endpoints (`POST /topics/` and `GET /topics/user/{user
 * Injects the `AsyncSession` database dependency.
 * Instantiates the `TopicRepository` and `TopicService`.
 * Handles the creation of new topics and fetching existing topics for a specific user.
+
+#### `answer_router.py`
+Defines the Answer-related endpoints (`POST /quiz/answer`).
+* Injects the `AsyncSession` database dependency.
+* Instantiates the `AnswerRepository` and `AnswerService` to persist student responses.
 
 ### 6. Environment Templates & Requirements
 * **`.env.example`**: A documented list of all required environment variables without actual values (safe for version control).

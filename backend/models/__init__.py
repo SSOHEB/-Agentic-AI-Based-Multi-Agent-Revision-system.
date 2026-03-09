@@ -8,11 +8,13 @@ from backend.models.base import Base
 from backend.models.user import User
 from backend.models.topic import Topic
 from backend.models.quiz_session import QuizSession
+from backend.models.answer import Answer
 
 # Define the models exposed by this package
 __all__ = [
     "Base",
     "User",
     "Topic",
-    "QuizSession"
+    "QuizSession",
+    "Answer"
 ]

@@ -36,6 +36,7 @@ This is the main entry point to your application. It brings everything together.
 These files act as the URLs your frontend will call.
 * If the frontend wants to get a user's profile, it calls the waiter at `/profile`. The `profile.py` router takes the request and passes it to the right place.
 * E.g., `topic_router.py` handles requests like "Create a new topic" or "Get all my topics" and sends the orders to the kitchen!
+* E.g., `answer_router.py` receives a request to `POST /quiz/answer` to accept and process a newly submitted quiz answer.
 
 ### `models/` - The Database Layout
 This tells the database what your tables look like.
@@ -43,6 +44,7 @@ This tells the database what your tables look like.
 * **`user.py`**: This is printed on the letterhead! It tells the database that every User must have a unique ID, an email, a name, and a secret `firebase_uid` to prove they logged in securely.
 * **`topic.py`**: A Topic is a core subject a user wants to study (like "Python Loops"). We've set up a "Relationship" between the User and the Topic here. The database is smart enough to know that an individual Topic is directly owned by exactly one User, but a User can own hundreds of Topics!
 * **`quiz_session.py`**: Think of this as a receipt for a test a student took! It prints exactly when the test started (`started_at`), when it ended (`ended_at`), the overall `score`, and whether they finished it or abandoned it (`status`). It links directly back to both the `User` who took the test, and the specific `Topic` they were studying.
+* **`answer.py`**: This represents the student's actual written answer sheet! It stores exactly what they answered (`answer_text`) and links directly back to the `QuizSession` so we know which test this belongs to.
 * This uses *SQLAlchemy*, which translates Python code into SQL (database language) automatically!
 
 ### `schemas/` - The Bouncers (Pydantic)
@@ -50,6 +52,7 @@ Before data enters or leaves your app, it must be checked.
 * **Pydantic** is a library that checks if the data is correct. 
 * If someone tries to create an account with an age of `"banana"`, the schema will block it and say "Age must be a number!"
 * E.g., `topic_schema.py` ensures that when someone creates a Topic, they provide an exact `title` and a valid UUID for the `user_id`.
+* E.g., `answer_schema.py` ensures to strictly accept a `session_id`, `question_id`, and `answer_text` when a user submits an answer to a quiz!
 
 ### `repositories/` - The Pantry Managers (Database Access)
 These files act as the official handlers for fetching or saving ingredients in the pantry (database).
