@@ -37,6 +37,7 @@ These files act as the URLs your frontend will call.
 * If the frontend wants to get a user's profile, it calls the waiter at `/profile`. The `profile.py` router takes the request and passes it to the right place.
 * E.g., `topic_router.py` handles requests like "Create a new topic" or "Get all my topics" and sends the orders to the kitchen!
 * E.g., `answer_router.py` receives a request to `POST /quiz/answer` to accept and process a newly submitted quiz answer.
+* E.g., `quiz_router.py` handles getting the actual test ready (like `POST /quiz/start`) and fetching the generated study questions (`GET /quiz/{session_id}/questions`).
 
 ### `models/` - The Database Layout
 This tells the database what your tables look like.
@@ -44,7 +45,9 @@ This tells the database what your tables look like.
 * **`user.py`**: This is printed on the letterhead! It tells the database that every User must have a unique ID, an email, a name, and a secret `firebase_uid` to prove they logged in securely.
 * **`topic.py`**: A Topic is a core subject a user wants to study (like "Python Loops"). We've set up a "Relationship" between the User and the Topic here. The database is smart enough to know that an individual Topic is directly owned by exactly one User, but a User can own hundreds of Topics!
 * **`quiz_session.py`**: Think of this as a receipt for a test a student took! It prints exactly when the test started (`started_at`), when it ended (`ended_at`), the overall `score`, and whether they finished it or abandoned it (`status`). It links directly back to both the `User` who took the test, and the specific `Topic` they were studying.
+* **`question.py`**: A discrete test question generated for a specific quiz session! It holds the `question_text`, the difficulty, and the multiple choice `options` (stored as JSON) so the front-end knows exactly what to render.
 * **`answer.py`**: This represents the student's actual written answer sheet! It stores exactly what they answered (`answer_text`) and links directly back to the `QuizSession` so we know which test this belongs to.
+* **`performance_log.py`**: This is the report card! After a quiz completes, this table stores a permanent record of the mathematical accuracy (`performance_score`) tying together the User, Topic, and specific Session.
 * This uses *SQLAlchemy*, which translates Python code into SQL (database language) automatically!
 
 ### `schemas/` - The Bouncers (Pydantic)
@@ -52,7 +55,9 @@ Before data enters or leaves your app, it must be checked.
 * **Pydantic** is a library that checks if the data is correct. 
 * If someone tries to create an account with an age of `"banana"`, the schema will block it and say "Age must be a number!"
 * E.g., `topic_schema.py` ensures that when someone creates a Topic, they provide an exact `title` and a valid UUID for the `user_id`.
+* E.g., `question_schema.py` ensures questions sent to the frontend have exactly the format React expects (the text, the type, the options).
 * E.g., `answer_schema.py` ensures to strictly accept a `session_id`, `question_id`, and `answer_text` when a user submits an answer to a quiz!
+* E.g., `performance_schema.py` ensures the calculated scores going back out strictly follow decimals (floats) rather than whole numbers (integers).
 
 ### `repositories/` - The Pantry Managers (Database Access)
 These files act as the official handlers for fetching or saving ingredients in the pantry (database).
@@ -62,6 +67,7 @@ These files act as the official handlers for fetching or saving ingredients in t
 This is where the actual work happens. The router takes an order and hands it to a service.
 * If a router gets a request to "Create a new quiz session", it tells `session_service.py` to do the heavy lifting: checking the database, doing math, and talking to AI agents.
 * E.g., `topic_service.py` handles the logic of attaching a default difficulty level if the user didn't provide one, and then officially asking the repository to save the new Topic.
+* E.g., `performance_service.py` is the mathematician. It asks the database for every answer a student submitted, checks them against the correct answers, calculates the exact percentage score, and then saves a permanent report card!
 
 ### `agents/` - The AI Specialists
 Since your app is AI-powered, these are specialized workers powered by LangGraph and Gemini.

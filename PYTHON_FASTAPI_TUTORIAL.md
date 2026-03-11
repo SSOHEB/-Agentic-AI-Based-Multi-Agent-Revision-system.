@@ -86,7 +86,7 @@ class Topic(Base):
     # We can also define Foreign Keys to link tables together! (e.g. linking to a User or a Topic)
     # user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
 ```
-*Note: As our project grew, we added models like `QuizSession` and `Answer` which heavily use ForeignKeys to securely link a student's answer sheet directly back to their test session!*
+*Note: As our project grew, we added models like `QuizSession`, `Question`, `Answer`, and `PerformanceLog` which heavily use ForeignKeys to securely link a student's answer sheet or final report card directly back to their dynamically generated test session!*
 
 ### Layer 2: The Validation Schemas (`backend/schemas/topic_schema.py`)
 Now that the database exists, we need to protect it. Users are clumsy. If they try to create a "Topic", they might forget to send a `title`, or they might send a `difficulty_level` of "banana". 

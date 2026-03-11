@@ -11,7 +11,7 @@ def main():
         'revision', 
         '--autogenerate', 
         '-m', 
-        'Add answers table'
+        'Add performance_log table'
     ]
     try:
         alembic.config.main(argv=alembicArgs)
