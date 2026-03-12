@@ -129,7 +129,13 @@ Open your terminal, make sure you are inside the `THE MAIN PROJECT` folder, and 
 * `backend.main:app` tells it to look in the `backend/main.py` file and start the `app` object.
 * `--reload` is a special flag for developers. It means every time you press "Save" in your code editor, the server instantly restarts itself so you don't have to!
 
-### Step 2: Open the Interactive Documentation (Swagger UI)
+### Step 2: Update the Database (Alembic)
+Whenever you create or edit a database model (like adding a new column to a table), you must update the actual PostgreSQL database. We do this using Alembic:
+1. Open your terminal and go into the `backend` folder: `cd backend`
+2. Generate a new migration script by running: `python -m alembic revision --autogenerate -m "Describe your changes here"`
+3. Apply the migration to your database by running: `python -m alembic upgrade head`
+
+### Step 3: Open the Interactive Documentation (Swagger UI)
 Once the server says it's running, open your web browser and go to:
 **http://127.0.0.1:8000/docs**
 

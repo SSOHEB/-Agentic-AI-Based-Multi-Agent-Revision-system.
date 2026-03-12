@@ -222,7 +222,8 @@ Contains all automated verification checks.
 Alembic is configured to automatically track changes in the SQLAlchemy models and generate versioned migration scripts.
 * Employs the `async` template to officially support our async `asyncpg` database connection.
 * Dynamically loads `DATABASE_URL` via the runtime `.env` integration inside `env.py`.
-* Exposes `Base.metadata` to securely detect the `users`, `topics`, and `quiz_sessions` tables for the `alembic revision --autogenerate` command.
+* Exposes `Base.metadata` to securely detect all models (`users`, `topics`, `quiz_sessions`, `questions`, `answers`, `performance_log`) for the `python -m alembic revision --autogenerate` command.
+* To apply generated migrations to your database, simply run `python -m alembic upgrade head` from within the `backend` directory.
 
 ## 9. Backend Fundamentals & Standards
 

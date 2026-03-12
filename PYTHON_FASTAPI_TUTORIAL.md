@@ -88,6 +88,8 @@ class Topic(Base):
 ```
 *Note: As our project grew, we added models like `QuizSession`, `Question`, `Answer`, and `PerformanceLog` which heavily use ForeignKeys to securely link a student's answer sheet or final report card directly back to their dynamically generated test session!*
 
+*To physically create or update these tables in the PostgreSQL database after writing the Python model classes, we use **Alembic**. Running `python -m alembic revision --autogenerate -m "message"` generates a script for the changes, and `python -m alembic upgrade head` safely applies those changes to the live database.*
+
 ### Layer 2: The Validation Schemas (`backend/schemas/topic_schema.py`)
 Now that the database exists, we need to protect it. Users are clumsy. If they try to create a "Topic", they might forget to send a `title`, or they might send a `difficulty_level` of "banana". 
 
