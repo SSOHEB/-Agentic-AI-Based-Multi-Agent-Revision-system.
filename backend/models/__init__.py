@@ -8,6 +8,7 @@ from backend.models.base import Base
 from backend.models.user import User
 from backend.models.topic import Topic
 from backend.models.quiz_session import QuizSession
+from backend.models.session_topic import SessionTopic
 from backend.models.answer import Answer
 from backend.models.question import Question
 from backend.models.performance_log import PerformanceLog
@@ -18,6 +19,7 @@ __all__ = [
     "User",
     "Topic",
     "QuizSession",
+    "SessionTopic",
     "Answer",
     "Question",
     "PerformanceLog"

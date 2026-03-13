@@ -49,20 +49,11 @@ class ProgressService:
 
             days_since = (now - log.logged_at).days
 
-            # Derive interval_day from the number of logs for this topic
-            topic_log_count = sum(
-                1 for s in recent_scores if str(s.topic_id) == str(topic.id)
-            )
-            interval_day = _derive_interval_day(topic_log_count)
-
-            # Derive state from performance history
-            state = _derive_state(log.performance_score, topic_log_count)
-
             topic_dicts.append({
                 "latest_performance_score": log.performance_score,
                 "days_since_last_session": days_since,
-                "current_interval_day": interval_day,
-                "state": state,
+                "current_interval_day": topic.current_interval_day,
+                "state": topic.state,
             })
 
         # 3 — System retention via core.retention
@@ -96,35 +87,3 @@ class ProgressService:
             topics_total=topics_total,
             topics_graduated=graduated_count,
         )
-
-
-def _derive_interval_day(log_count: int) -> int:
-    """Map the number of completed sessions to a spaced-repetition interval day."""
-    # TODO: remove once topics table includes current_interval_day column
-    if log_count <= 1:
-        return 1
-    elif log_count <= 2:
-        return 3
-    elif log_count <= 4:
-        return 7
-    elif log_count <= 6:
-        return 21
-    else:
-        return 60
-
-
-def _derive_state(latest_score: float, log_count: int) -> str:
-    """Derive a topic's learning state from its performance history.
-
-    Rules:
-        graduated → 5+ sessions with latest score >= 0.85
-        decaying  → latest score dropped below 0.50
-        active    → everything else
-    """
-    # TODO: remove once topics table includes state column
-    if log_count >= 5 and latest_score >= 0.85:
-        return "graduated"
-    elif latest_score < 0.50:
-        return "decaying"
-    else:
-        return "active"

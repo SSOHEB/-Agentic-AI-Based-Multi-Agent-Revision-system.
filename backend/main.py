@@ -17,6 +17,8 @@ from backend.routers.user_router import router as user_router
 from backend.routers.topic_router import router as topic_router
 from backend.routers.quiz_router import router as quiz_router
 from backend.routers.answer_router import router as answer_router
+from backend.routers.scheduler import router as scheduler_router
+from backend.routers.question_generation import router as question_generation_router
 
 # Initialize the FastAPI app with the lifespan event handler (which initializes Firebase)
 app = FastAPI(
@@ -48,6 +50,8 @@ app.include_router(notifications.router)
 app.include_router(internal.router)
 app.include_router(user_router)
 app.include_router(answer_router)
+app.include_router(scheduler_router)
+app.include_router(question_generation_router)
 
 
 @app.get("/", tags=["Health"])

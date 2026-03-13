@@ -20,7 +20,7 @@ backend/
 │   ├── .env
 │   ├── .env.example                 # Template for environment variables
 │   │
-│   ├── core/                        # App-wide infrastructure (config, db, auth)
+│   ├── core/                        # App-wide infrastructure (config, db, auth, retention)
 │   ├── routers/                     # HTTP endpoints (FastAPI routers)
 │   ├── models/                      # SQLAlchemy ORM models
 │   ├── schemas/                     # Pydantic schemas for request/response validation
@@ -28,7 +28,7 @@ backend/
 │   ├── services/                    # Business logic bridging routers and agents
 │   ├── agents/                      # LangGraph AI agents (Scheduler, RAG, Quiz, Eval, Progress)
 │   ├── tools/                       # Reusable tools for agents (RAG retriever, DB accessor)
-│   ├── tasks/                       # Background background workers/cron jobs
+│   ├── tasks/                       # Background workers/cron jobs
 │   ├── memory/                      # LangGraph checkpoint persistence
 │   ├── tests/                       # Unit and integration tests
 │   └── migrations/                  # Alembic database migrations
@@ -66,6 +66,12 @@ Reusable FastAPI dependency injections.
 * **`get_db`**: Injects an active `AsyncSession` into route handlers.
 * **`get_current_user`**: Secures endpoints by extracting the Bearer token, verifying it against Firebase, and returning the authenticated user's payload. Raises a `401 Unauthorized` exception if the token is invalid or missing.
 
+### 5. Retention Engine (`retention.py`)
+Pure-Python module for spaced-repetition mathematics. No database dependency.
+* **`compute_topic_retention(performance_score, days_since_session, interval_day)`**: Calculates current retention using a linear decay model, clamped to `[0.10, 1.00]`.
+* **`compute_retention_after(prev_retention, session_performance, interval_day)`**: Blends historical retention with new session performance using interval-based weights.
+* **`compute_system_retention(topics)`**: Computes weighted aggregate retention across all topics, accounting for topic state (active/decaying/graduated) and interval importance weights. Graduated topics do not decay.
+
 ## Database Models (`backend/models/`)
 This directory contains the SQLAlchemy 2.0 ORM classes that define the structure of our PostgreSQL tables.
 
@@ -86,7 +92,8 @@ The ORM model representing the `topics` table (the actual study subjects).
 * Inherits from `Base` and `TimestampMixin`.
 * **Primary Key**: `id` (UUID4).
 * **Foreign Key**: `user_id` mapped strictly to `users.id` causing `CASCADE` deletion if the parent user is deleted.
-* **Fields**: `title`, `description` (nullable), and `difficulty_level` (integer).
+* **Fields**: `title`, `description` (nullable), `difficulty_level` (integer).
+* **Scheduling Fields**: `current_interval_day` (int, default 1), `next_review_date` (nullable datetime), `state` (string: "active", "decaying", or "graduated").
 * **Relationships**: Links back to the `User` owner via `topic.user`.
 
 ### `quiz_session.py`
@@ -95,9 +102,16 @@ The ORM model representing the `quiz_sessions` table (individual revision test i
 * **Primary Key**: `id` (UUID4).
 * **Foreign Keys**: 
   * `user_id` mapped strictly to `users.id` (CASCADE deletion).
-  * `topic_id` mapped strictly to `topics.id` (CASCADE deletion).
-* **Fields**: `started_at` (DateTime), `ended_at` (nullable DateTime), `score` (nullable float), `difficulty_level` (int), and `status` (string).
-* **Relationships**: Links back to the `User` actor via `quiz_session.user`, and to the specific `Topic` being tested.
+  * `topic_id` mapped to `topics.id` (CASCADE deletion, **nullable** to support multi-topic sessions via the junction table).
+* **Fields**: `started_at` (DateTime), `ended_at` (nullable DateTime), `score` (nullable float), `difficulty_level` (int), and `status` (string: "active", "completed", "pre_generated").
+* **Relationships**: Links back to the `User` actor via `quiz_session.user`.
+
+### `session_topic.py`
+The junction table model linking quiz sessions to multiple topics.
+* **Table**: `session_topics`.
+* **Composite Primary Key**: (`session_id`, `topic_id`).
+* **Foreign Keys**: `session_id` → `quiz_sessions.id`, `topic_id` → `topics.id` (both CASCADE).
+* Enables batch scheduling: one quiz session can cover multiple topics.
 
 ### `answer.py`
 The ORM model representing the `answers` table (stores individual answers submitted during a quiz session).
@@ -111,7 +125,7 @@ The ORM model representing the `questions` table (the actual questions served du
 * Inherits from `Base` and `TimestampMixin`.
 * **Primary Key**: `id` (UUID4).
 * **Foreign Key**: `quiz_session_id` mapped strictly to `quiz_sessions.id` (CASCADE deletion).
-* **Fields**: `question_text`, `question_type`, `difficulty`, and `options` (JSON).
+* **Fields**: `question_text`, `question_type`, `difficulty`, `options` (JSON), and `correct_answer`.
 
 ### `performance_log.py`
 The ORM model representing the `performance_log` table, which tracks a student's accuracy and historical progress.
@@ -141,6 +155,22 @@ Defines the Pydantic schemas for Question-related operations.
 Defines the Pydantic schemas for Performance Tracking.
 * **`PerformanceLogResponse`**: Formats the outgoing JSON representation of a calculated performance log, including exactly how well a user performed on a specific session and their retention metrics.
 
+### `session_schema.py`
+Defines the Pydantic schema for the session completion endpoint.
+* **`SessionCompleteResponse`**: Returns `session_id` and `status` after a quiz session is finalized.
+
+### `progress_schema.py`
+Defines the Pydantic schema for the progress dashboard.
+* **`DashboardResponse`**: Returns `retention_percent`, `trend`, `exam_readiness`, `topics_total`, and `topics_graduated`.
+
+### `scheduler_schema.py`
+Defines the Pydantic schema for the scheduler.
+* **`SchedulerResponse`**: Returns `session_id` (nullable), `topics_count`, and `status` ("created" or "no_topics_due").
+
+### `question_generation_schema.py`
+Defines the Pydantic schema for question generation.
+* **`QuestionGenerationResponse`**: Returns `session_id` and `questions_created` count.
+
 ## Data Access Layer (`backend/repositories/`)
 This directory contains repository classes that abstract away direct database queries using SQLAlchemy.
 
@@ -162,6 +192,25 @@ Provides database access for the PerformanceLog entity.
 * Creates new tracking entries securely in the database (`create_log`).
 * Queries the chronologically most recent performance metric for a given user's scope (`get_latest_topic_performance`).
 
+### `session_repository.py`
+Provides database access for the QuizSession entity.
+* Creates new quiz sessions (`create`), fetches them (`get_session`), and safely updates their status (`update_session_status` with None guard).
+
+### `progress_repository.py`
+Provides read-only database access for progress analytics.
+* Fetches user topics, recent performance logs, graduated topic counts, and the latest performance log per topic.
+
+### `scheduler_repository.py`
+Provides database access for the scheduler engine.
+* **`get_due_topics(user_id)`**: Queries topics where `next_review_date <= NOW()` (excluding graduated topics).
+* **`create_quiz_session(user_id)`**: Creates a pre-generated quiz session.
+* **`attach_topics_to_session(session_id, topic_ids)`**: Links topics to a session via the `session_topics` junction table.
+
+### `question_generation_repository.py`
+Provides database access for question generation.
+* **`get_session_topics(session_id)`**: Fetches topics linked to a session via the `session_topics` junction table.
+* **`create_questions(session_id, questions)`**: Bulk-inserts generated questions for a session.
+
 ## Business Logic Layer (`backend/services/`)
 This directory contains service classes that handle core application and business rules, acting as the middleman between Routers and Repositories.
 
@@ -177,6 +226,23 @@ Contains the `AnswerService` class.
 ### `performance_service.py`
 Contains the `PerformanceService` class.
 * Extracts historical answer metrics dynamically and calculates floating-point accuracy metrics linking quiz models. Includes future-proof hooks for invoking retention formulas.
+
+### `session_service.py`
+Contains the `SessionService` class.
+* Orchestrates the session completion pipeline: validates the session exists, prevents double completion, logs performance via `PerformanceService`, and marks the session as completed.
+* Dependencies: `SessionRepository` and `PerformanceService` only (clean DI).
+
+### `progress_service.py`
+Contains the `ProgressService` class.
+* Builds the full progress dashboard for a user: fetches topics/performance data, calls `compute_system_retention` from `core.retention`, calculates exam readiness (`coverage * 0.50 + avg_l3_score * 0.30 + retention * 0.20`), and returns `DashboardResponse`.
+
+### `scheduler_service.py`
+Contains the `SchedulerService` class.
+* Orchestrates quiz session generation: fetches due topics, caps at 5, creates one session, attaches topics via the junction table, and returns a summary.
+
+### `question_generation_service.py`
+Contains the `QuestionGenerationService` class.
+* Generates placeholder MCQ questions (2 per topic, L1/L2 difficulty) for a scheduled session. Will later integrate with RAG retrieval and the Quiz Agent for AI-based question generation.
 
 ### 5. Application Entrypoint (`main.py`)
 The root file that ties the entire backend together.
@@ -210,6 +276,26 @@ Defines Quiz Session-related endpoints (`POST /quiz/start` and `GET /quiz/{sessi
 * Injects `AsyncSession` dependency.
 * Initiates new quiz sessions, and fetches the list of generated questions for an active session to surface to the frontend.
 
+#### `sessions.py`
+Defines the session completion endpoint (`POST /sessions/{session_id}/complete`).
+* Instantiates `SessionRepository` and `PerformanceService`, passes them to `SessionService`.
+* Finalizes a quiz session: logs performance and marks it as completed.
+
+#### `progress.py`
+Defines the progress dashboard endpoint (`GET /progress/dashboard?user_id=`).
+* Returns learning analytics: retention percent, trend, exam readiness, topic counts.
+* Uses `core.retention` for all retention math.
+
+#### `scheduler.py`
+Defines the scheduler endpoint (`POST /scheduler/generate?user_id=`).
+* Generates pre-built quiz sessions for topics that are due for review.
+* Creates one session and attaches up to 5 topics via the junction table.
+
+#### `question_generation.py`
+Defines the question generation endpoint (`POST /quiz/{session_id}/generate`).
+* Generates placeholder MCQ questions for all topics attached to a session.
+* Returns the count of questions created.
+
 ### 6. Environment Templates & Requirements
 * **`.env.example`**: A documented list of all required environment variables without actual values (safe for version control).
 * **`requirements.txt`**: A clean, explicitly versioned list of all python package dependencies to avoid future update conflicts.
@@ -222,8 +308,14 @@ Contains all automated verification checks.
 Alembic is configured to automatically track changes in the SQLAlchemy models and generate versioned migration scripts.
 * Employs the `async` template to officially support our async `asyncpg` database connection.
 * Dynamically loads `DATABASE_URL` via the runtime `.env` integration inside `env.py`.
-* Exposes `Base.metadata` to securely detect all models (`users`, `topics`, `quiz_sessions`, `questions`, `answers`, `performance_log`) for the `python -m alembic revision --autogenerate` command.
+* Exposes `Base.metadata` to securely detect all models (`users`, `topics`, `quiz_sessions`, `session_topics`, `questions`, `answers`, `performance_log`) for the `python -m alembic revision --autogenerate` command.
+* **Latest migration** (`f3a1b2c4d5e6`): Adds scheduling columns to `topics` (`current_interval_day`, `next_review_date`, `state`), creates the `session_topics` junction table, and makes `quiz_sessions.topic_id` nullable.
 * To apply generated migrations to your database, simply run `python -m alembic upgrade head` from within the `backend` directory.
+
+### 9. Tests (`tests/`)
+Contains all automated verification checks.
+* **`test_health.py`**: An asynchronous test using `pytest` and `httpx` to ping the root endpoint and assert it successfully returns `{status: ok}`.
+* **`test_retention.py`**: Smoke tests for the `core/retention.py` module verifying decay clamping, rounding, weighted averages, graduated topic stability, decaying state multiplier, and mixed-topic scenarios.
 
 ## 9. Backend Fundamentals & Standards
 

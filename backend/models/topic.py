@@ -1,6 +1,7 @@
 import uuid
+from datetime import datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import String, Integer, ForeignKey
+from sqlalchemy import String, Integer, ForeignKey, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID
 
@@ -42,6 +43,24 @@ class Topic(Base, TimestampMixin):
         Integer,
         default=1,
         nullable=False
+    )
+
+    # ── Scheduling columns ──────────────────────────
+    current_interval_day: Mapped[int] = mapped_column(
+        Integer,
+        default=1,
+        nullable=False,
+    )
+
+    next_review_date: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    state: Mapped[str] = mapped_column(
+        String,
+        default="active",  # active | decaying | graduated
+        nullable=False,
     )
     
     # Relationships

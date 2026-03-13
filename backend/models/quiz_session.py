@@ -29,9 +29,9 @@ class QuizSession(Base, TimestampMixin):
         index=True
     )
     
-    topic_id: Mapped[uuid.UUID] = mapped_column(
+    topic_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("topics.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
         index=True
     )
     

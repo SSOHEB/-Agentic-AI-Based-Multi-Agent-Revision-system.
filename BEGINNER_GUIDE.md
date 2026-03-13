@@ -38,14 +38,19 @@ These files act as the URLs your frontend will call.
 * E.g., `topic_router.py` handles requests like "Create a new topic" or "Get all my topics" and sends the orders to the kitchen!
 * E.g., `answer_router.py` receives a request to `POST /quiz/answer` to accept and process a newly submitted quiz answer.
 * E.g., `quiz_router.py` handles getting the actual test ready (like `POST /quiz/start`) and fetching the generated study questions (`GET /quiz/{session_id}/questions`).
+* E.g., `sessions.py` handles finalizing a quiz (`POST /sessions/{session_id}/complete`) — it logs performance and marks the session as done.
+* E.g., `progress.py` returns the learning dashboard (`GET /progress/dashboard`) with retention scores, exam readiness, and topic stats.
+* E.g., `scheduler.py` generates the next quiz session (`POST /scheduler/generate`) by finding topics that are due for review.
+* E.g., `question_generation.py` populates a session with questions (`POST /quiz/{session_id}/generate`).
 
 ### `models/` - The Database Layout
 This tells the database what your tables look like.
 * **`base.py`**: Think of this as a blank sheet of company letterhead. Every official document (table) we create prints on this letterhead, so it automatically gets stamped with "Created At" and "Updated At" times.
 * **`user.py`**: This is printed on the letterhead! It tells the database that every User must have a unique ID, an email, a name, and a secret `firebase_uid` to prove they logged in securely.
-* **`topic.py`**: A Topic is a core subject a user wants to study (like "Python Loops"). We've set up a "Relationship" between the User and the Topic here. The database is smart enough to know that an individual Topic is directly owned by exactly one User, but a User can own hundreds of Topics!
-* **`quiz_session.py`**: Think of this as a receipt for a test a student took! It prints exactly when the test started (`started_at`), when it ended (`ended_at`), the overall `score`, and whether they finished it or abandoned it (`status`). It links directly back to both the `User` who took the test, and the specific `Topic` they were studying.
-* **`question.py`**: A discrete test question generated for a specific quiz session! It holds the `question_text`, the difficulty, and the multiple choice `options` (stored as JSON) so the front-end knows exactly what to render.
+* **`topic.py`**: A Topic is a core subject a user wants to study (like "Python Loops"). We've set up a "Relationship" between the User and the Topic here. The database is smart enough to know that an individual Topic is directly owned by exactly one User, but a User can own hundreds of Topics! Topics also track scheduling state: when they're next due for review (`next_review_date`), what interval they're on (`current_interval_day`), and whether they're active, decaying, or graduated.
+* **`quiz_session.py`**: Think of this as a receipt for a test a student took! It prints exactly when the test started (`started_at`), when it ended (`ended_at`), the overall `score`, and whether they finished it or abandoned it (`status`). It links back to the `User` who took the test. The `topic_id` is nullable because modern sessions can cover multiple topics!
+* **`session_topic.py`**: This is the link between sessions and topics. A single quiz session can cover multiple topics (like testing on "Python Loops" AND "Recursion" in the same quiz). This table stores those connections.
+* **`question.py`**: A discrete test question generated for a specific quiz session! It holds the `question_text`, the difficulty, the multiple choice `options` (stored as JSON), and the `correct_answer` so the front-end knows exactly what to render.
 * **`answer.py`**: This represents the student's actual written answer sheet! It stores exactly what they answered (`answer_text`) and links directly back to the `QuizSession` so we know which test this belongs to.
 * **`performance_log.py`**: This is the report card! After a quiz completes, this table stores a permanent record of the mathematical accuracy (`performance_score`) tying together the User, Topic, and specific Session.
 * This uses *SQLAlchemy*, which translates Python code into SQL (database language) automatically!
@@ -68,6 +73,18 @@ This is where the actual work happens. The router takes an order and hands it to
 * If a router gets a request to "Create a new quiz session", it tells `session_service.py` to do the heavy lifting: checking the database, doing math, and talking to AI agents.
 * E.g., `topic_service.py` handles the logic of attaching a default difficulty level if the user didn't provide one, and then officially asking the repository to save the new Topic.
 * E.g., `performance_service.py` is the mathematician. It asks the database for every answer a student submitted, checks them against the correct answers, calculates the exact percentage score, and then saves a permanent report card!
+* E.g., `session_service.py` finalizes quizzes: makes sure you can't "complete" a quiz twice, logs your performance, and marks the session as done.
+* E.g., `progress_service.py` builds the dashboard: crunches retention numbers (using `core/retention.py`), calculates exam readiness, and tells the frontend how you're doing.
+* E.g., `scheduler_service.py` decides when you need to study: finds topics that are due, creates a new quiz session, and attaches up to 5 topics.
+* E.g., `question_generation_service.py` fills a quiz session with questions (currently placeholders, later AI-generated).
+
+### `core/` - The Foundation
+Think of this as the building's infrastructure (electricity, plumbing, locks on the doors).
+* `config.py`: Reads your `.env` file to know secret passwords and settings.
+* `database.py`: Connects your app to the PostgreSQL database so you can save and read data.
+* `firebase.py`: The security guard. It checks if users who are trying to log in are actually who they say they are.
+* `dependencies.py`: Handy tools that any part of your app can ask for (like "give me the database" or "tell me which user made this request").
+* `retention.py`: The brain! This is a pure math module that calculates how well you remember things using spaced-repetition science. It figures out topic retention, blends old and new scores, and computes your overall system retention.
 
 ### `agents/` - The AI Specialists
 Since your app is AI-powered, these are specialized workers powered by LangGraph and Gemini.
@@ -85,6 +102,20 @@ Before we open the restaurant to the public, we need to make sure everything wor
 ### `requirements.txt` & `.env` - The Instruction Manuals
 * **`requirements.txt`**: A grocery list of exactly which third-party tools (and their exact versions) we need to build the app (like FastAPI, SQLAlchemy, Google Gemini tools).
 * **`.env.example` & `.env`**: A list of secret passwords and keys needed to make the app work. `example` is public, while `.env` stays locked down on your machine!
+
+### The Complete Learning Loop
+Here's how all the pieces work together as a complete spaced-repetition system:
+
+1. **User creates topics** they want to study (e.g., "Python Loops", "Recursion")
+2. **Scheduler** finds topics that are due for review and creates a quiz session
+3. **Question Generator** fills that session with quiz questions
+4. **User answers** the questions through the frontend
+5. **Performance Service** logs how well they did
+6. **Retention Engine** calculates how well they remember each topic
+7. **Progress Analytics** shows a dashboard with retention scores and exam readiness
+8. **Scheduler** uses the retention data to decide when the next review should happen
+
+And the cycle repeats! This is called **spaced repetition** — reviewing at optimal intervals to maximize long-term memory.
 
 ---
 

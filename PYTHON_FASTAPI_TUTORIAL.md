@@ -220,3 +220,72 @@ When a user tries to create a Topic:
 5. The Service hands the model down to the **Repository** (`topic_repository.py`).
 6. The Repository writes raw SQL and safely commits it to the **Database**.
 7. The Database confirms it saved. The success bubbles all the way back up to the Router, which replies `200 OK` to the user's browser!
+
+---
+
+## 4. Advanced Architecture Patterns
+
+As the project grows, we've introduced more sophisticated patterns beyond basic CRUD. Here are the key ones:
+
+### Pure Computation Modules (`core/retention.py`)
+Not everything needs the database. The retention engine is a **pure Python module** — it takes data in, does math, and returns results. No database, no HTTP, no async. This makes it extremely easy to test and reuse.
+
+```python
+# This is a pure function — no database, no async
+def compute_topic_retention(performance_score, days_since_session, interval_day):
+    decay_rate = 0.30 / interval_day
+    retention = performance_score * (1 - decay_rate * days_since_session)
+    return round(max(0.10, min(1.00, retention)), 4)
+```
+
+### Service-to-Service Dependencies
+Sometimes a service needs help from another service. For example, `SessionService` needs `PerformanceService` to log scores when completing a quiz. We inject it the same way we inject repositories:
+
+```python
+class SessionService:
+    def __init__(self, repository: SessionRepository, performance_service: PerformanceService):
+        self.repository = repository
+        self.performance_service = performance_service
+
+    async def complete_session(self, session_id):
+        session = await self.repository.get_session(session_id)
+        # Use the other service to do its job
+        await self.performance_service.log_session_performance(session_id)
+        # Then do our own job
+        await self.repository.update_session_status(session_id, "completed")
+```
+
+### Junction Tables (Many-to-Many Relationships)
+A quiz session can cover multiple topics. Instead of a single `topic_id`, we use a **junction table** called `session_topics`:
+
+```python
+class SessionTopic(Base):
+    __tablename__ = "session_topics"
+    session_id = mapped_column(UUID, ForeignKey("quiz_sessions.id"), primary_key=True)
+    topic_id = mapped_column(UUID, ForeignKey("topics.id"), primary_key=True)
+```
+
+To query through the junction table, we use a SQL JOIN:
+
+```python
+async def get_session_topics(self, session_id):
+    stmt = (
+        select(Topic)
+        .join(SessionTopic, SessionTopic.topic_id == Topic.id)
+        .where(SessionTopic.session_id == session_id)
+    )
+    result = await self.session.execute(stmt)
+    return list(result.scalars().all())
+```
+
+### The Complete Spaced-Repetition Pipeline
+All of these patterns work together to create the full learning loop:
+
+```
+Scheduler (creates session) → Question Generator (fills questions)
+    → User answers → Performance logged → Retention updated
+    → Progress dashboard → Scheduler (next review)
+```
+
+Each step is a separate module following `Router → Service → Repository`, which means you can modify or replace any step without breaking the others!
+
