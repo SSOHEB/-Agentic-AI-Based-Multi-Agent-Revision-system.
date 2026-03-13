@@ -18,3 +18,15 @@ class SessionRepository:
         stmt = select(QuizSession).where(QuizSession.id == session_id)
         result = await self.session.execute(stmt)
         return result.scalars().first()
+
+    async def update_session_status(self, session_id: UUID, status: str) -> QuizSession | None:
+        session = await self.get_session(session_id)
+
+        if not session:
+            return None
+
+        session.status = status
+        await self.session.commit()
+        await self.session.refresh(session)
+
+        return session
